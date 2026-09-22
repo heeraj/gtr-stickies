@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com data:; script-src 'self'; img-src 'self' data:;" />
+  <title>GTR Stickies</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@400;500&family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600&family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,600;1,9..144,400;1,9..144,500&family=JetBrains+Mono:ital,wght@0,400;1,400&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,500;1,8..60,400&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="settings" id="settings">
+    <div class="grain" aria-hidden="true"></div>
+    <header class="manager-chrome">
+      <div class="drag">
+        <span class="wordmark">GTR Settings</span>
+      </div>
+      <div class="actions">
+        <button type="button" class="icon-btn close" id="close" title="Close" aria-label="Close">
+          <svg viewBox="0 0 16 16" width="12" height="12" aria-hidden="true">
+            <path d="M4 4l8 8M12 4l-8 8" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" />
+          </svg>
+        </button>
+      </div>
+    </header>
+    <div class="settings-body">
+      <h2>New notes</h2>
+      <div class="field">
+        <span>Default font</span>
+        <select id="font" aria-label="Default font">
+          <option value="Source Serif 4">Source Serif</option>
+          <option value="Fraunces">Fraunces</option>
+          <option value="DM Sans">DM Sans</option>
+          <option value="Georgia">Georgia</option>
+          <option value="Segoe UI">Segoe UI</option>
+          <option value="JetBrains Mono">Mono</option>
+          <option value="Caveat">Caveat</option>
+        </select>
+      </div>
+      <div class="field">
+        <span>Default size</span>
+        <select id="size" aria-label="Default size">
+          <option value="12">12</option>
+          <option value="14">14</option>
+          <option value="16">16</option>
+          <option value="18">18</option>
+          <option value="22">22</option>
+          <option value="28">28</option>
+        </select>
+      </div>
+      <div class="field">
+        <span>Line spacing</span>
+        <select id="leading" aria-label="Default line spacing">
+          <option value="1.2">1.2</option>
+          <option value="1.45">1.45</option>
+          <option value="1.55">1.55</option>
+          <option value="1.7">1.7</option>
+          <option value="2">2.0</option>
+        </select>
+      </div>
+      <div class="field">
+        <span>Paper color</span>
+        <div class="swatch-row" id="papers" role="group" aria-label="Default paper color"></div>
+      </div>
+      <div class="field">
+        <span>Ink color</span>
+        <div class="ink-row ink-swatches" id="inks" role="group" aria-label="Default ink color"></div>
+      </div>
+      <div class="field">
+        <span>Opacity</span>
+        <label class="opacity-wrap" title="Default paper transparency">
+          <input type="range" id="opacity" min="55" max="100" step="1" value="100" aria-label="Default opacity" />
+        </label>
+      </div>
+      <div class="field">
+        <span>Pin new notes on top</span>
+        <button type="button" class="toggle" id="alwaysOnTop" aria-pressed="false" title="Pin new notes on top">
+          <span class="knob"></span>
+        </button>
+      </div>
+      <div class="field">
+        <span>Start folded</span>
+        <button type="button" class="toggle" id="newNotesFolded" aria-pressed="false" title="New notes start folded">
+          <span class="knob"></span>
+        </button>
+      </div>
+
+      <h2>Behavior</h2>
+      <div class="field">
+        <span>Confirm before delete</span>
+        <button type="button" class="toggle" id="confirmDelete" aria-pressed="true">
+          <span class="knob"></span>
+        </button>
+      </div>
+      <div class="field">
+        <span>Restore open notes</span>
+        <button type="button" class="toggle" id="restoreOpenNotes" aria-pressed="false">
+          <span class="knob"></span>
+        </button>
+      </div>
+      <p class="hint">The app always opens to All notes. Click a note there to put it on the desk.</p>
+      <div class="field" id="login-row">
+        <span>Start on login</span>
+        <button type="button" class="toggle" id="startOnLogin" aria-pressed="false">
+          <span class="knob"></span>
+        </button>
+      </div>
+      <p class="hint" id="login-hint" hidden>Available on macOS and Windows.</p>
+      <div class="field">
+        <span>Snap to edges</span>
+        <button type="button" class="toggle" id="snapToEdges" aria-pressed="false">
+          <span class="knob"></span>
+        </button>
+      </div>
+      <p class="hint">After you drop a note near a screen edge, it settles flush.</p>
+
+      <h2>Dashboard</h2>
+      <div class="field stack">
+        <span>Default module</span>
+        <input type="text" id="boardCourse" maxlength="80" placeholder="Business Law" aria-label="Default module" />
+      </div>
+      <div class="field">
+        <span>Open dashboard on launch</span>
+        <button type="button" class="toggle" id="openBoardOnLaunch" aria-pressed="false" title="Open dashboard on launch">
+          <span class="knob"></span>
+        </button>
+      </div>
+      <p class="hint">Off by default. All notes still opens first either way.</p>
+      <div class="field stack">
+        <span>Live class URL</span>
+        <input type="url" id="boardLiveUrl" placeholder="Published CSV or JSON URL" aria-label="Live class URL" />
+      </div>
+      <p class="hint">Same link classmates paste in Dashboard → Share. Publish a Google Sheet to web as CSV.</p>
+
+      <h2>Shortcuts</h2>
+      <div class="field">
+        <span>New note</span>
+        <span class="kbd" id="shortcut">Ctrl+Shift+N</span>
+      </div>
+      <p class="hint">Works from anywhere. With a note focused, Ctrl+N also makes one. Ctrl+` or Ctrl+Shift+F folds the focused note.</p>
+      <h2>About</h2>
+      <p class="hint">GTR Stickies — sticky notes and a class Dashboard. Developed by Mohamed Asjau.</p>
+      <p class="hint">Contact: <a href="mailto:mail.asjau@gmail.com">mail.asjau@gmail.com</a></p>
+      <p class="hint app-version" id="app-version">GTR Stickies 3.0</p>
+      <p class="hint">GTR Stickies 3.0 is an early build and may contain bugs.</p>
+      <h2>Privacy</h2>
+      <p class="hint">Notes, images, settings, and dashboard items stay on this computer. There is no account and no analytics. Nothing is uploaded unless you paste a live class URL, in which case the app only fetches that sheet. OCR runs locally. Sharing a dashboard is opt-in. Contact: mail.asjau@gmail.com.</p>
+    </div>
+  </div>
+  <script src="settings.js"></script>
+</body>
+</html>

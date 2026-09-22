@@ -1,0 +1,67 @@
+{
+  "name": "gtr-stickies",
+  "productName": "GTR Stickies",
+  "version": "3.0.4",
+  "description": "GTR Stickies \u2014 sticky notes and a class Dashboard. Developed by Mohamed Asjau.",
+  "main": "main.js",
+  "author": "Mohamed Asjau <mail.asjau@gmail.com>",
+  "license": "MIT",
+  "scripts": {
+    "start": "electron . --no-sandbox",
+    "dist": "electron-builder --win --x64"
+  },
+  "dependencies": {
+    "tesseract.js": "^7.0.0"
+  },
+  "build": {
+    "appId": "gtr.stickies",
+    "productName": "GTR Stickies",
+    "copyright": "Copyright (c) Mohamed Asjau",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "main.js",
+      "preload.js",
+      "package.json",
+      "PRIVACY.md",
+      "README.md",
+      "renderer/**/*",
+      "assets/**/*"
+    ],
+    "win": {
+      "icon": "assets/icon.ico",
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "zip",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "executableName": "GTR Stickies"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "GTR Stickies",
+      "include": "build/installer.nsh",
+      "artifactName": "GTR-Stickies-Setup-${version}.${ext}",
+      "warningsAsErrors": false,
+      "installerIcon": "assets/icon.ico",
+      "uninstallerIcon": "assets/icon.ico"
+    }
+  },
+  "devDependencies": {
+    "electron-builder": "^26.15.3",
+    "electron": "^33.2.0"
+  }
+}

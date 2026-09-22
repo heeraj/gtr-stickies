@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en" class="board-page">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com data:; script-src 'self'; img-src 'self' data:;" />
+  <title>Dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600&family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,600;1,9..144,400;1,9..144,500&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,500;1,8..60,400&family=Caveat:wght@500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="board" id="board">
+    <div class="grain" aria-hidden="true"></div>
+    <header class="manager-chrome board-chrome">
+      <div class="drag" id="gadget-drag" title="Drag">
+        <span class="wordmark">Dashboard</span>
+        <span class="board-clock" id="clock"></span>
+      </div>
+      <div class="actions">
+        <div class="qs-wrap" id="qs-wrap">
+          <button type="button" class="icon-btn" id="qs-btn" title="Quick settings" aria-label="Quick settings" aria-haspopup="true">
+            <svg viewBox="0 0 16 16" width="13" height="13" aria-hidden="true">
+              <path d="M6.4 1.8h3.2l.3 1.4c.4.15.77.37 1.1.64l1.38-.5 1.6 2.76-1.16.92a4.3 4.3 0 0 1 0 1.56l1.16.92-1.6 2.76-1.38-.5c-.33.27-.7.49-1.1.64l-.3 1.4H6.4l-.3-1.4a4.3 4.3 0 0 1-1.1-.64l-1.38.5L2.02 9.98l1.16-.92a4.3 4.3 0 0 1 0-1.56L2.02 6.58l1.6-2.76 1.38.5c.33-.27.7-.49 1.1-.64l.3-1.4z" fill="none" stroke="currentColor" stroke-width="1.3" />
+              <circle cx="8" cy="8" r="1.7" fill="none" stroke="currentColor" stroke-width="1.3" />
+            </svg>
+          </button>
+        </div>
+        <button type="button" class="icon-btn plus" id="add" title="Add reminder" aria-label="Add reminder">
+          <svg viewBox="0 0 16 16" width="13" height="13" aria-hidden="true">
+            <path d="M8 2.5v11M2.5 8h11" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" />
+          </svg>
+        </button>
+        <button type="button" class="icon-btn" id="share" title="Share dashboard" aria-label="Share dashboard">
+          <svg viewBox="0 0 16 16" width="13" height="13" aria-hidden="true">
+            <circle cx="4.2" cy="8" r="1.6" fill="none" stroke="currentColor" stroke-width="1.3" />
+            <circle cx="11.4" cy="4.2" r="1.6" fill="none" stroke="currentColor" stroke-width="1.3" />
+            <circle cx="11.4" cy="11.8" r="1.6" fill="none" stroke="currentColor" stroke-width="1.3" />
+            <path d="M5.6 7.3l4.2-2.3M5.6 8.7l4.2 2.3" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" />
+          </svg>
+        </button>
+        <button type="button" class="icon-btn" id="refresh" title="Refresh dashboard" aria-label="Refresh dashboard" hidden>
+          <svg viewBox="0 0 16 16" width="13" height="13" aria-hidden="true">
+            <path d="M12.4 8.1a4.4 4.4 0 1 1-1.2-3.4" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" />
+            <path d="M12.6 3.4v3.1h-3.1" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" />
+          </svg>
+        </button>
+        <button type="button" class="icon-btn min" id="minimize" title="Minimize" aria-label="Minimize">
+          <svg viewBox="0 0 16 16" width="12" height="12" aria-hidden="true">
+            <path d="M3.5 8.2h9" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" />
+          </svg>
+        </button>
+        <button type="button" class="icon-btn close" id="close" title="Close" aria-label="Close">
+          <svg viewBox="0 0 16 16" width="12" height="12" aria-hidden="true">
+            <path d="M4 4l8 8M12 4l-8 8" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" />
+          </svg>
+        </button>
+      </div>
+    </header>
+    <div class="board-today" id="today-class"></div>
+    <div class="board-summary" id="summary"></div>
+    <div class="board-status" id="status" hidden></div>
+    <div class="board-body" id="body"></div>
+    <p class="list-empty" id="empty">No deadlines yet — add one, or import a dashboard.</p>
+
+
+    <div class="paper-menu qs-menu" id="qs-menu" hidden role="menu" aria-label="Quick settings">
+      <p class="qs-label">Theme</p>
+      <div class="qs-themes" id="qs-themes"></div>
+      <p class="qs-label">Font</p>
+      <div class="qs-pills" id="qs-fonts"></div>
+      <p class="qs-label">Size</p>
+      <div class="qs-pills" id="qs-sizes"></div>
+      <div class="menu-sep"></div>
+      <button type="button" id="qs-clock" role="menuitem"><span class="menu-label">24-hour clock</span></button>
+    </div>
+    <div class="resize-handle" id="resize" title="Resize" aria-hidden="true">
+      <span class="grip"></span>
+    </div>
+    <div class="paper-menu share-menu" id="share-menu" hidden role="menu" aria-label="Share dashboard">
+      <button type="button" data-act="export" role="menuitem"><span class="menu-label">Export dashboard…</span></button>
+      <button type="button" data-act="import" role="menuitem"><span class="menu-label">Import dashboard…</span></button>
+      <button type="button" data-act="live" role="menuitem"><span class="menu-label">Live class URL…</span></button>
+      <button type="button" data-act="reset-deletes" role="menuitem"><span class="menu-label">Reset deletes</span></button>
+      <button type="button" data-act="restore" role="menuitem"><span class="menu-label">Restore deleted from sheet</span></button>
+      <div class="menu-sep"></div>
+      <p class="share-hint">Classmates install GTR Stickies, then Import the file or paste the same live URL. To live-update: keep a Google Sheet, File → Share → Publish to web → CSV, paste that link.</p>
+    </div>
+
+    <div class="composer" id="composer" hidden>
+      <h2 id="composer-title">New deadline</h2>
+      <div class="composer-field">
+        <span>Type</span>
+        <div class="type-tabs" id="c-types" role="tablist" aria-label="Type">
+          <button type="button" role="tab" data-type="assignment">Assignment</button>
+          <button type="button" role="tab" data-type="quiz">Quiz</button>
+          <button type="button" role="tab" data-type="test">Test</button>
+          <button type="button" role="tab" data-type="reminder">Reminder</button>
+          <button type="button" role="tab" data-type="presentation">Presentation</button>
+        </div>
+        <input type="hidden" id="c-type" value="assignment" />
+      </div>
+      <label class="composer-field">
+        <span>Title</span>
+        <input type="text" id="c-title" maxlength="160" placeholder="e.g. Unit 3 quiz" aria-label="Title" />
+      </label>
+      <label class="composer-field">
+        <span>Due</span>
+        <input type="datetime-local" id="c-due" aria-label="Due date and time" />
+      </label>
+      <label class="composer-field">
+        <span>Module</span>
+        <input type="text" id="c-course" maxlength="80" placeholder="e.g. Business Law" aria-label="Module" />
+      </label>
+      <label class="composer-field">
+        <span>Notes</span>
+        <textarea id="c-notes" rows="3" maxlength="800" placeholder="Optional" aria-label="Notes"></textarea>
+      </label>
+      <div class="confirm-row composer-actions">
+        <button type="button" class="ghost" id="c-cancel">Cancel</button>
+        <button type="button" class="ghost danger-text" id="c-delete" hidden>Delete</button>
+        <button type="button" class="save" id="c-save">Save</button>
+      </div>
+    </div>
+
+    <div class="board-prompt" id="url-prompt" hidden>
+      <h2>Live class URL</h2>
+      <p class="share-hint">Paste a published Google Sheet CSV link, or a JSON board URL.</p>
+      <input type="url" id="url-input" placeholder="https://…" aria-label="Live class URL" />
+      <div class="confirm-row">
+        <button type="button" class="ghost" id="url-clear">Clear</button>
+        <button type="button" class="ghost" id="url-cancel">Cancel</button>
+        <button type="button" class="save" id="url-save">Save</button>
+      </div>
+    </div>
+
+    <div class="confirm" id="confirm" hidden>
+      <p class="confirm-copy" id="confirm-copy">Delete this item?</p>
+      <div class="confirm-row">
+        <button type="button" class="ghost" id="keep">Keep</button>
+        <button type="button" class="danger" id="discard">Delete</button>
+      </div>
+    </div>
+  </div>
+  <script src="board.js"></script>
+</body>
+</html>

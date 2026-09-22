@@ -1,0 +1,45 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+out/
+release/
+
+# Installers and archives (attach via GitHub Releases instead)
+*.exe
+*.msi
+*.dmg
+*.AppImage
+*.zip
+*.7z
+*.tar.gz
+*.rar
+
+# Logs and caches
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.npm/
+.cache/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+Desktop.ini
+*.swp
+*.swo
+*~
+.idea/
+.vscode/
+*.code-workspace
+
+# Env / secrets
+.env
+.env.*
+!.env.example
+
+# Electron / local
+*.local
+coverage/
