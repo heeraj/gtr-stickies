@@ -258,6 +258,44 @@ html, body {
   transition: transform 180ms ease;
 }
 
+.icon-btn.presenter.is-on {
+  opacity: 1;
+  color: var(--ink);
+  background: rgba(42, 36, 28, 0.1);
+}
+
+.icon-btn.presenter:not(.is-on) {
+  opacity: 0.55;
+}
+
+.icon-btn.presenter.is-on svg {
+  opacity: 1;
+}
+
+/* Hide Chromium cursor over script/paper while Presenter is on; chrome keeps a normal cursor. */
+.note.is-presenter .paper,
+.note.is-presenter .paper *,
+.note.is-presenter #text,
+.note.is-presenter #text *,
+.note.is-presenter .stickers,
+.note.is-presenter .stickers * {
+  cursor: none !important;
+}
+
+.note.is-presenter .chrome,
+.note.is-presenter .chrome *,
+.note.is-presenter .format-bar,
+.note.is-presenter .format-bar *,
+.note.is-presenter .icon-btn,
+.note.is-presenter .icon-btn * {
+  cursor: default !important;
+}
+
+.note.is-presenter .resize-handle,
+.note.is-presenter .resize-handle * {
+  cursor: nwse-resize !important;
+}
+
 .icon-btn.close:hover {
   background: rgba(168, 62, 42, 0.14);
   color: #8C2F22;

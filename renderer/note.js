@@ -36,6 +36,7 @@ const DEFAULT_FORMAT = {
 const noteEl = document.getElementById('note');
 const textEl = document.getElementById('text');
 const pinBtn = document.getElementById('pin');
+const presenterBtn = document.getElementById('presenter');
 const plusBtn = document.getElementById('plus');
 const boardBtn = document.getElementById('board');
 const closeBtn = document.getElementById('close');
@@ -83,6 +84,7 @@ let state = {
   color: COLORS[0],
   text: '',
   pinned: false,
+  presenterMode: false,
   folded: false,
   colors: COLORS,
   inkColors: INK_COLORS.map((c) => c.hex),
@@ -251,6 +253,27 @@ function applyPin(pinned) {
   pinBtn.classList.toggle('is-on', state.pinned);
   pinBtn.setAttribute('aria-pressed', state.pinned ? 'true' : 'false');
   pinBtn.title = state.pinned ? 'Unpin from top' : 'Keep on top';
+}
+
+function applyPresenter(on) {
+  state.presenterMode = !!on;
+  if (presenterBtn) {
+    presenterBtn.classList.toggle('is-on', state.presenterMode);
+    presenterBtn.setAttribute('aria-pressed', state.presenterMode ? 'true' : 'false');
+    presenterBtn.title = state.presenterMode
+      ? 'Exit presenter mode'
+      : 'Presenter: hide pointer & hide from screen share';
+    presenterBtn.setAttribute('aria-label', presenterBtn.title);
+  }
+  noteEl.classList.toggle('is-presenter', state.presenterMode);
+  if (!state.presenterMode) {
+    if (window.petal.setPresenterPointer) window.petal.setPresenterPointer(false);
+  } else {
+    const paper = document.querySelector('.paper');
+    if (paper && typeof paper.matches === 'function' && paper.matches(':hover')) {
+      if (window.petal.setPresenterPointer) window.petal.setPresenterPointer(true);
+    }
+  }
 }
 
 function applyFolded(folded) {
@@ -932,6 +955,7 @@ function init(data) {
   };
   applyColor(state.color);
   applyPin(!!state.pinned);
+  applyPresenter(!!state.presenterMode);
   applyFolded(!!state.folded);
   paintInks();
   applyFormat(state.format);
@@ -1063,6 +1087,32 @@ document.addEventListener('keydown', (event) => {
 pinBtn.addEventListener('click', () => {
   applyPin(!state.pinned);
   window.petal.setPinned(state.pinned);
+});
+
+if (presenterBtn) {
+  presenterBtn.addEventListener('click', () => {
+    applyPresenter(!state.presenterMode);
+    if (window.petal.setPresenterMode) window.petal.setPresenterMode(state.presenterMode);
+  });
+}
+
+function notifyPresenterPointer(inside) {
+  if (!state.presenterMode) {
+    if (window.petal.setPresenterPointer) window.petal.setPresenterPointer(false);
+    return;
+  }
+  if (window.petal.setPresenterPointer) window.petal.setPresenterPointer(!!inside);
+}
+
+/** Hide OS cursor only over paper/script so Meet window-share has no ghost pointer;
+ *  restore when over chrome so Pin / Presenter / Close stay clickable. */
+const paperEl = document.querySelector('.paper');
+if (paperEl) {
+  paperEl.addEventListener('mouseenter', () => notifyPresenterPointer(true));
+  paperEl.addEventListener('mouseleave', () => notifyPresenterPointer(false));
+}
+window.addEventListener('blur', () => {
+  if (window.petal.setPresenterPointer) window.petal.setPresenterPointer(false);
 });
 
 plusBtn.addEventListener('click', () => {

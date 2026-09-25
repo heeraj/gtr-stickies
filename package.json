@@ -1,8 +1,8 @@
 {
   "name": "gtr-stickies",
   "productName": "GTR Stickies",
-  "version": "3.0.4",
-  "description": "GTR Stickies \u2014 sticky notes and a class Dashboard. Developed by Mohamed Asjau.",
+  "version": "3.0.5",
+  "description": "GTR Stickies — sticky notes and a class Dashboard. Developed by Mohamed Asjau.",
   "main": "main.js",
   "author": "Mohamed Asjau <mail.asjau@gmail.com>",
   "license": "MIT",
@@ -11,6 +11,8 @@
     "dist": "electron-builder --win --x64"
   },
   "dependencies": {
+    "@koromix/koffi-win32-x64": "^3.3.1",
+    "koffi": "^3.3.1",
     "tesseract.js": "^7.0.0"
   },
   "build": {
@@ -28,6 +30,11 @@
       "README.md",
       "renderer/**/*",
       "assets/**/*"
+    ],
+    "asarUnpack": [
+      "**/*.node",
+      "**/koffi/**",
+      "**/@koromix/**"
     ],
     "win": {
       "icon": "assets/icon.ico",
@@ -61,7 +68,7 @@
     }
   },
   "devDependencies": {
-    "electron-builder": "^26.15.3",
-    "electron": "^33.2.0"
+    "electron": "^33.2.0",
+    "electron-builder": "^26.15.3"
   }
 }

@@ -11,6 +11,8 @@ contextBridge.exposeInMainWorld('petal', {
   updateFormat: (format) => ipcRenderer.send('note:format', format),
   setColor: (color) => ipcRenderer.send('note:color', color),
   setPinned: (pinned) => ipcRenderer.send('note:pin', pinned),
+  setPresenterMode: (on) => ipcRenderer.send('note:presenter', on),
+  setPresenterPointer: (inside) => ipcRenderer.send('note:presenter-pointer', !!inside),
   close: (payload) => ipcRenderer.send('note:close', payload || {}),
   minimize: () => ipcRenderer.send('note:minimize'),
   toggleFold: () => ipcRenderer.send('note:toggle-fold'),

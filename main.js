@@ -415,6 +415,7 @@ function normalizeNote(data) {
     color: COLORS.includes(data.color) ? data.color : COLORS[colorCursor % COLORS.length],
     text: typeof data.text === 'string' ? data.text : '',
     pinned: data.pinned !== false,
+    presenterMode: !!data.presenterMode,
     open: data.open !== false,
     folded: !!data.folded,
     unfoldedHeight:
@@ -868,6 +869,86 @@ function syncPinHold() {
   }
 }
 
+
+/** Exclude note from OS screen capture (full-screen / Display Capture). Bonus for Meet full-desktop share. */
+function applyPresenterMode(win, on) {
+  if (!win || win.isDestroyed()) return;
+  try {
+    win.setContentProtection(!!on);
+  } catch (_) {
+    /* older Electron / platforms */
+  }
+}
+
+/* Win32 ShowCursor — Meet window-share draws the OS cursor onto the shared slide preview
+   when the pointer rests over a floating sticky that overlaps the slide window's screen bounds.
+   CSS cursor:none alone does not stop that ghost cursor. */
+let _showCursorFn = null;
+let _showCursorTried = false;
+let _systemCursorHidden = false;
+const presenterPointerNotes = new Set();
+
+function loadShowCursor() {
+  if (process.platform !== 'win32') return null;
+  if (_showCursorTried) return _showCursorFn;
+  _showCursorTried = true;
+  try {
+    const koffi = require('koffi');
+    const user32 = koffi.load('user32.dll');
+    _showCursorFn = user32.func('int __stdcall ShowCursor(int bShow)');
+  } catch (err) {
+    console.warn('ShowCursor FFI unavailable:', err && err.message ? err.message : err);
+    _showCursorFn = null;
+  }
+  return _showCursorFn;
+}
+
+function hideSystemCursor() {
+  if (_systemCursorHidden) return;
+  const ShowCursor = loadShowCursor();
+  if (!ShowCursor) return;
+  try {
+    ShowCursor(0);
+    _systemCursorHidden = true;
+  } catch (err) {
+    console.warn('ShowCursor(FALSE) failed:', err && err.message ? err.message : err);
+  }
+}
+
+function showSystemCursor() {
+  if (!_systemCursorHidden) return;
+  const ShowCursor = loadShowCursor();
+  if (!ShowCursor) {
+    _systemCursorHidden = false;
+    return;
+  }
+  try {
+    ShowCursor(1);
+  } catch (err) {
+    console.warn('ShowCursor(TRUE) failed:', err && err.message ? err.message : err);
+  }
+  _systemCursorHidden = false;
+}
+
+function syncSystemCursorForPresenter() {
+  if (presenterPointerNotes.size > 0) hideSystemCursor();
+  else showSystemCursor();
+}
+
+function setPresenterPointerInside(noteId, inside) {
+  if (!noteId) return;
+  if (inside) presenterPointerNotes.add(noteId);
+  else presenterPointerNotes.delete(noteId);
+  syncSystemCursorForPresenter();
+}
+
+function clearPresenterPointer(noteId) {
+  if (noteId) presenterPointerNotes.delete(noteId);
+  else presenterPointerNotes.clear();
+  syncSystemCursorForPresenter();
+}
+
+
 function attachWindow(entry, { focus } = { focus: true }) {
   const noteData = entry.data;
   const bounds = ensureBounds(noteData);
@@ -905,8 +986,10 @@ function attachWindow(entry, { focus } = { focus: true }) {
   });
 
   applyNotePin(win, !!noteData.pinned);
+  applyPresenterMode(win, !!noteData.presenterMode);
   win.on('blur', () => {
     if (entry.data && entry.data.pinned) applyNotePin(win, true);
+    if (entry.data) clearPresenterPointer(entry.data.id);
   });
   syncPinHold();
 
@@ -996,6 +1079,7 @@ function attachWindow(entry, { focus } = { focus: true }) {
   });
 
   win.on('closed', () => {
+    clearPresenterPointer(noteData.id);
     const current = notes.get(noteData.id);
     if (!current) return;
     current.win = null;
@@ -1177,6 +1261,7 @@ function duplicateNote(noteId) {
     color: src.color,
     text: src.text,
     pinned: src.pinned,
+    presenterMode: !!src.presenterMode,
     open: true,
     folded: false,
     unfoldedHeight: src.unfoldedHeight || src.height || DEFAULT_H,
@@ -2401,6 +2486,29 @@ function wireIpc() {
     persist();
   });
 
+  ipcMain.on('note:presenter', (event, enabled) => {
+    const entry = findEntry(event.sender);
+    if (!entry) return;
+    const on = !!enabled;
+    entry.data.presenterMode = on;
+    entry.data.updatedAt = Date.now();
+    if (entry.win && !entry.win.isDestroyed()) {
+      applyPresenterMode(entry.win, on);
+    }
+    if (!on) clearPresenterPointer(entry.data.id);
+    persist();
+  });
+
+  ipcMain.on('note:presenter-pointer', (event, inside) => {
+    const entry = findEntry(event.sender);
+    if (!entry || !entry.data) return;
+    if (!entry.data.presenterMode) {
+      clearPresenterPointer(entry.data.id);
+      return;
+    }
+    setPresenterPointerInside(entry.data.id, !!inside);
+  });
+
   ipcMain.on('note:close', (event, payload) => {
     const entry = findEntry(event.sender);
     if (!entry) return;
@@ -2867,6 +2975,8 @@ app.on('before-quit', () => {
     clearInterval(pinHoldTimer);
     pinHoldTimer = null;
   }
+  presenterPointerNotes.clear();
+  showSystemCursor();
   globalShortcut.unregisterAll();
   terminateTess();
 });
