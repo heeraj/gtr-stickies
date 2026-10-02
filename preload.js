@@ -13,6 +13,12 @@ contextBridge.exposeInMainWorld('petal', {
   setPinned: (pinned) => ipcRenderer.send('note:pin', pinned),
   setPresenterMode: (on) => ipcRenderer.send('note:presenter', on),
   setPresenterPointer: (inside) => ipcRenderer.send('note:presenter-pointer', !!inside),
+  onRemoteScroll: (callback) => {
+    ipcRenderer.on('note:remote-scroll', (_event, data) => callback(data));
+  },
+  onRemoteInfo: (callback) => {
+    ipcRenderer.on('note:remote-info', (_event, data) => callback(data));
+  },
   close: (payload) => ipcRenderer.send('note:close', payload || {}),
   minimize: () => ipcRenderer.send('note:minimize'),
   toggleFold: () => ipcRenderer.send('note:toggle-fold'),

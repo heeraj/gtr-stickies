@@ -1,12 +1,12 @@
 # GTR Stickies
 
-Little thoughts, always on top. Version 3.0.
+Little thoughts, always on top. Version 3.0.6.
 
 GTR Stickies is a warm, frameless desktop sticky-notes app with a class Dashboard. Developed by Mohamed Asjau. Contact: mail.asjau@gmail.com. Notes sit on your screen like scraps of paper -- cream, blush, sage, sky, and lavender -- with a quiet top bar, a tray for new notes, and local persistence. The All notes window is the home of the app.
 
 Privacy: see [PRIVACY.md](PRIVACY.md).
 
-GTR Stickies 3.0 is an early build and may contain bugs. Developed by Mohamed Asjau. Contact: mail.asjau@gmail.com.
+GTR Stickies 3.0.6 is an early build and may contain bugs. Developed by Mohamed Asjau. Contact: mail.asjau@gmail.com.
 
 ## How to run
 
@@ -32,7 +32,7 @@ That pulls `electron` and `tesseract.js`. The script is in package.json.
 - Format bar: font and line spacing apply to the note; size and ink color apply to the selected text only (like Word). Color is a compact dropdown (Brown, Black, Red, Green, Blue, Cream). Bold / italic / underline / strike (Ctrl/Cmd+B, I, U, Ctrl+Shift+X), yellow/peach highlight plus Remove highlight, bullets, and a checklist on the current line. Left/center align and a droplet slider for paper transparency (55%-100%).
 - Right-click a word for spelling suggestions (including British/US variants like behaviour/behavior) and Add to dictionary; spellcheck uses en-GB and en-US; undo/redo (Ctrl+Z / Ctrl+Y) also reverse color, size, highlight, and clear formatting. The paper menu keeps cut/copy/paste (including paste without formatting, Ctrl+Shift+V), select all, bold/italic/underline/strike, highlight, ink color, size (12-28), and clear formatting when a word or selection is active; lists stay on the format bar only. Right-click empty paper for paste, select all, undo/redo, and paste image. Image right-click still snipes. Ctrl+F opens a slim find strip; match marks are temporary and never saved into notes.json. All notes rows have a matching right-click menu (open, pin, duplicate, copy title, delete).
 - Pin keeps the note always on top (on by default, or as set in Settings).
-- Presenter mode (eye-off button next to Pin): for Meet **window** share of slides, hides the Windows system cursor (via ShowCursor) while the pointer is over the note paper so the shared preview does not show a ghost cursor; CSS also hides the in-note cursor on the script. Content protection is enabled as a bonus for full-screen / display capture. Wheel-scroll still works; chrome buttons restore a normal cursor so you can exit Presenter.
+- Presenter mode (eye-off button next to Pin): for Meet **window** share of slides, hides the Windows system cursor (via ShowCursor) while the pointer is over the note paper so the shared preview does not show a ghost cursor; CSS also hides the in-note cursor on the script. Content protection is enabled as a bonus for full-screen / display capture. Wheel-scroll still works; chrome buttons restore a normal cursor so you can exit Presenter. Turning Presenter on also starts a LAN phone remote (see below).
 - Color dots change the paper.
 - Minimize sends a note to the Windows taskbar (it stays listed in All notes). Click the taskbar item, or use All notes / tray Show all, to restore. Close hides a note that has text. Empty notes are discarded (optional confirm).
 - All notes is the main menu: search, open, pin, duplicate, delete, plus a header minimize that also stays on the taskbar. The Dashboard button (calendar) sits next to +. Gear opens Settings. If every note window is closed, All notes stays available (the app does not quit).
@@ -43,6 +43,19 @@ That pulls `electron` and `tesseract.js`. The script is in package.json.
 Closing the last note does not quit the app -- All notes comes back if it was closed, or use the tray to make another, or Quit GTR Stickies.
 
 First launch seeds two sample notes in All notes (one cream welcome, one sage blank). They stay closed until you open them.
+
+
+## Phone remote (Presenter)
+
+When Presenter mode is on for any note, Stickies starts a tiny local HTTP + WebSocket server on your LAN (port **17832**, or the next free port nearby). A phone on the same Wi‑Fi can open the page and swipe to scroll the note paper **without focusing** the Stickies window — so the mouse/keyboard stay on PowerPoint or Meet.
+
+1. Pin the cue note and turn on Presenter (eye-off).
+2. A compact **Remote** banner appears with `http://<lan-ip>:17832` and a 6-digit code (and **Copy link**).
+3. On your phone (same Wi‑Fi), open the link or visit the URL and enter the code.
+4. Swipe up to scroll the script down; swipe down to go back. Large ▲ / ▼ buttons page the note.
+5. Turn Presenter off on every note to stop the server (code is regenerated next time).
+
+Security (v0): LAN only, code gate, no cloud accounts. Windows Firewall may prompt the first time — allow **private** networks so phones on your Wi‑Fi can connect.
 
 ## Dashboard
 
@@ -99,6 +112,7 @@ board.json: { version, course, liveUrl, updatedAt, items, notified, theme, compa
     package.json
     PRIVACY.md
     main.js            Electron main process, tray, persistence, manager, settings, board
+    remote-server.js    LAN HTTP+WS phone remote for Presenter
     preload.js         Isolated IPC bridge (window.petal)
     renderer/index.html
     renderer/styles.css
@@ -111,5 +125,6 @@ board.json: { version, course, liveUrl, updatedAt, items, notified, theme, compa
     renderer/board.js
     renderer/expired.html
     renderer/expired.js
+    renderer/remote.html  Mobile remote UI (served on LAN)
     build/installer.nsh
     assets/icon.png    Tray / window icon

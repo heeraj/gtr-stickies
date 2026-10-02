@@ -78,6 +78,10 @@ const findCount = document.getElementById('find-count');
 const findPrevBtn = document.getElementById('find-prev');
 const findNextBtn = document.getElementById('find-next');
 const findCloseBtn = document.getElementById('find-close');
+const remoteBanner = document.getElementById('remote-banner');
+const remoteBannerUrl = document.getElementById('remote-banner-url');
+const remoteBannerCode = document.getElementById('remote-banner-code');
+const remoteCopyBtn = document.getElementById('remote-copy');
 
 let state = {
   id: null,
@@ -248,6 +252,49 @@ function setColor(color) {
   window.petal.setColor(color);
 }
 
+
+let remoteInfo = null;
+
+function updateRemoteBanner(info) {
+  remoteInfo = info && info.running ? info : null;
+  if (!remoteBanner) return;
+  if (!state.presenterMode || !remoteInfo) {
+    remoteBanner.hidden = true;
+    return;
+  }
+  const url = remoteInfo.url || (remoteInfo.baseUrl ? remoteInfo.baseUrl + '/?code=' + remoteInfo.code : '');
+  if (remoteBannerUrl) {
+    remoteBannerUrl.textContent = url
+      ? url.replace(/\?code=.*/, '')
+      : (remoteInfo.ip ? 'http://' + remoteInfo.ip + ':' + remoteInfo.port : 'starting…');
+    remoteBannerUrl.title = url || '';
+  }
+  if (remoteBannerCode) {
+    remoteBannerCode.textContent = remoteInfo.code ? ('code ' + remoteInfo.code) : '';
+  }
+  remoteBanner.hidden = false;
+}
+
+function applyRemoteScroll(payload) {
+  if (!payload) return;
+  const el = textEl;
+  if (!el) return;
+  // Never focus — phone remote must not steal presentation focus.
+  if (typeof payload.dy === 'number' && Number.isFinite(payload.dy) && payload.dy !== 0) {
+    el.scrollBy({ top: payload.dy, left: 0, behavior: 'auto' });
+    return;
+  }
+  if (typeof payload.ratio === 'number' && Number.isFinite(payload.ratio)) {
+    const max = Math.max(0, el.scrollHeight - el.clientHeight);
+    el.scrollTop = max * Math.max(0, Math.min(1, payload.ratio));
+    return;
+  }
+  if (payload.page === 'up' || payload.page === 'down') {
+    const page = Math.max(48, Math.floor(el.clientHeight * 0.85));
+    el.scrollBy({ top: payload.page === 'up' ? -page : page, left: 0, behavior: 'auto' });
+  }
+}
+
 function applyPin(pinned) {
   state.pinned = !!pinned;
   pinBtn.classList.toggle('is-on', state.pinned);
@@ -268,6 +315,7 @@ function applyPresenter(on) {
   noteEl.classList.toggle('is-presenter', state.presenterMode);
   if (!state.presenterMode) {
     if (window.petal.setPresenterPointer) window.petal.setPresenterPointer(false);
+    updateRemoteBanner(null);
   } else {
     const paper = document.querySelector('.paper');
     if (paper && typeof paper.matches === 'function' && paper.matches(':hover')) {
@@ -1095,6 +1143,36 @@ if (presenterBtn) {
     if (window.petal.setPresenterMode) window.petal.setPresenterMode(state.presenterMode);
   });
 }
+
+if (window.petal.onRemoteScroll) {
+  window.petal.onRemoteScroll((payload) => {
+    applyRemoteScroll(payload);
+  });
+}
+
+if (window.petal.onRemoteInfo) {
+  window.petal.onRemoteInfo((info) => {
+    updateRemoteBanner(info);
+  });
+}
+
+if (remoteCopyBtn) {
+  remoteCopyBtn.addEventListener('click', async (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    const url = (remoteInfo && remoteInfo.url) || '';
+    if (!url) return;
+    try {
+      if (window.petal.writeClipboardText) await window.petal.writeClipboardText(url);
+      else if (navigator.clipboard && navigator.clipboard.writeText) await navigator.clipboard.writeText(url);
+      remoteCopyBtn.textContent = 'Copied';
+      setTimeout(() => { remoteCopyBtn.textContent = 'Copy link'; }, 1200);
+    } catch (_) {
+      /* ignore */
+    }
+  });
+}
+
 
 function notifyPresenterPointer(inside) {
   if (!state.presenterMode) {

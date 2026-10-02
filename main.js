@@ -15,6 +15,7 @@ const path = require('path');
 const fs = require('fs');
 const http = require('http');
 const https = require('https');
+const { createPresenterRemote } = require('./remote-server');
 
 const COLORS = ['#F6E6C8', '#F4C7B8', '#D5E5C8', '#CDE4F0', '#DDD6F3'];
 const INK_COLORS = ['#2A241C', '#111111', '#8C2F22', '#2F5D3A', '#1E3A5F', '#F8F1E3'];
@@ -949,6 +950,94 @@ function clearPresenterPointer(noteId) {
 }
 
 
+let remoteTargetNoteId = null;
+let presenterRemote = null;
+
+function getPresenterRemote() {
+  if (presenterRemote) return presenterRemote;
+  presenterRemote = createPresenterRemote({
+    htmlPath: path.join(__dirname, 'renderer', 'remote.html'),
+    onScroll: (payload) => {
+      applyRemoteScroll(payload);
+    },
+    onStatus: (info) => {
+      broadcastRemoteInfo(info);
+    },
+  });
+  return presenterRemote;
+}
+
+function presenterEntries() {
+  return [...notes.values()].filter((e) => e && e.data && e.data.presenterMode);
+}
+
+function resolveRemoteTargetEntry() {
+  const live = presenterEntries().filter((e) => e.win && !e.win.isDestroyed());
+  if (!live.length) return null;
+  if (remoteTargetNoteId) {
+    const hit = live.find((e) => e.data.id === remoteTargetNoteId);
+    if (hit) return hit;
+  }
+  return live[live.length - 1];
+}
+
+function applyRemoteScroll(payload) {
+  const entry = resolveRemoteTargetEntry();
+  if (!entry || !entry.win || entry.win.isDestroyed()) return;
+  const wc = entry.win.webContents;
+  if (!wc || wc.isDestroyed()) return;
+  // Scroll only — never focus / moveTop (keeps PowerPoint / Meet in front).
+  try {
+    wc.send('note:remote-scroll', payload || {});
+  } catch (_) {
+    /* ignore */
+  }
+}
+
+function broadcastRemoteInfo(info) {
+  const payload = info || (presenterRemote ? presenterRemote.info() : { running: false });
+  for (const entry of notes.values()) {
+    if (!entry || !entry.data || !entry.data.presenterMode) continue;
+    if (!entry.win || entry.win.isDestroyed()) continue;
+    try {
+      entry.win.webContents.send('note:remote-info', {
+        ...payload,
+        targetNoteId: remoteTargetNoteId,
+      });
+    } catch (_) {
+      /* ignore */
+    }
+  }
+}
+
+async function syncPresenterRemote() {
+  const active = presenterEntries();
+  if (!active.length) {
+    remoteTargetNoteId = null;
+    if (presenterRemote && presenterRemote.isRunning()) {
+      presenterRemote.stop();
+    } else {
+      broadcastRemoteInfo({ running: false });
+    }
+    return;
+  }
+  if (remoteTargetNoteId) {
+    const still = active.some((e) => e.data.id === remoteTargetNoteId);
+    if (!still) remoteTargetNoteId = active[active.length - 1].data.id;
+  } else {
+    remoteTargetNoteId = active[active.length - 1].data.id;
+  }
+  try {
+    const remote = getPresenterRemote();
+    const info = await remote.start();
+    broadcastRemoteInfo(info);
+  } catch (err) {
+    console.warn('Presenter remote failed to start:', err && err.message ? err.message : err);
+    broadcastRemoteInfo({ running: false, error: String(err && err.message ? err.message : err) });
+  }
+}
+
+
 function attachWindow(entry, { focus } = { focus: true }) {
   const noteData = entry.data;
   const bounds = ensureBounds(noteData);
@@ -1052,6 +1141,18 @@ function attachWindow(entry, { focus } = { focus: true }) {
       settings: publicSettings(),
       tessReady: tessdataReady(),
     });
+    if (noteData.presenterMode && presenterRemote && presenterRemote.isRunning()) {
+      try {
+        win.webContents.send('note:remote-info', {
+          ...presenterRemote.info(),
+          targetNoteId: remoteTargetNoteId,
+        });
+      } catch (_) {
+        /* ignore */
+      }
+    } else if (noteData.presenterMode) {
+      setTimeout(() => { try { syncPresenterRemote(); } catch (_) {} }, 0);
+    }
   });
 
   const saveBounds = () => {
@@ -1080,6 +1181,11 @@ function attachWindow(entry, { focus } = { focus: true }) {
 
   win.on('closed', () => {
     clearPresenterPointer(noteData.id);
+    if (remoteTargetNoteId === noteData.id) {
+      const others = presenterEntries().filter((e) => e.data.id !== noteData.id);
+      remoteTargetNoteId = others.length ? others[others.length - 1].data.id : null;
+    }
+    setTimeout(() => { try { syncPresenterRemote(); } catch (_) {} }, 0);
     const current = notes.get(noteData.id);
     if (!current) return;
     current.win = null;
@@ -1183,6 +1289,11 @@ function hideNote(entry) {
 function deleteNote(id) {
   const entry = notes.get(id);
   if (!entry) return;
+  if (entry.data) {
+    entry.data.presenterMode = false;
+    clearPresenterPointer(id);
+  }
+  if (remoteTargetNoteId === id) remoteTargetNoteId = null;
   notes.delete(id);
   if (entry.win && !entry.win.isDestroyed()) {
     entry.data.open = false;
@@ -1191,6 +1302,7 @@ function deleteNote(id) {
   }
   deleteNoteImages(id);
   persist();
+  syncPresenterRemote();
 }
 
 function hideOrRemove(entry) {
@@ -2495,8 +2607,20 @@ function wireIpc() {
     if (entry.win && !entry.win.isDestroyed()) {
       applyPresenterMode(entry.win, on);
     }
-    if (!on) clearPresenterPointer(entry.data.id);
+    if (!on) {
+      clearPresenterPointer(entry.data.id);
+      if (remoteTargetNoteId === entry.data.id) remoteTargetNoteId = null;
+      try {
+        entry.win && !entry.win.isDestroyed() &&
+          entry.win.webContents.send('note:remote-info', { running: false });
+      } catch (_) {
+        /* ignore */
+      }
+    } else {
+      remoteTargetNoteId = entry.data.id;
+    }
     persist();
+    syncPresenterRemote();
   });
 
   ipcMain.on('note:presenter-pointer', (event, inside) => {
@@ -2944,6 +3068,8 @@ if (!gotLock) {
       focusable: false,
     });
     restoreOrSeed();
+    /* presenter remote after restore */
+    syncPresenterRemote();
     startBoardTimers();
     if (settings.openBoardOnLaunch) openBoard();
 
@@ -2977,6 +3103,11 @@ app.on('before-quit', () => {
   }
   presenterPointerNotes.clear();
   showSystemCursor();
+  try {
+    if (presenterRemote) presenterRemote.stop();
+  } catch (_) {
+    /* ignore */
+  }
   globalShortcut.unregisterAll();
   terminateTess();
 });

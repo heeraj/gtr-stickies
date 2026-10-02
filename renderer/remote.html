@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1, user-scalable=no" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="theme-color" content="#12141a" />
+  <title>GTR Stickies Remote</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #12141a;
+      --card: #1c2029;
+      --ink: #e8e6e1;
+      --muted: #9a958c;
+      --accent: #c9a66b;
+      --ok: #6fbf8a;
+      --bad: #e07a6a;
+      --btn: #2a303c;
+    }
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    html, body {
+      margin: 0;
+      height: 100%;
+      background: var(--bg);
+      color: var(--ink);
+      font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+      overflow: hidden;
+      touch-action: none;
+      user-select: none;
+    }
+    body {
+      display: flex;
+      flex-direction: column;
+      padding: max(12px, env(safe-area-inset-top)) 16px max(16px, env(safe-area-inset-bottom));
+      gap: 12px;
+    }
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+    }
+    .brand {
+      font-size: 13px;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+      color: var(--muted);
+      text-transform: uppercase;
+    }
+    .status {
+      font-size: 12px;
+      font-weight: 600;
+      padding: 6px 10px;
+      border-radius: 999px;
+      background: var(--btn);
+      color: var(--muted);
+    }
+    .status.ok { color: var(--ok); }
+    .status.bad { color: var(--bad); }
+    .status.wait { color: var(--accent); }
+    .gate {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      gap: 14px;
+      max-width: 360px;
+      margin: 0 auto;
+      width: 100%;
+    }
+    .gate h1 {
+      margin: 0;
+      font-size: 22px;
+      font-weight: 650;
+    }
+    .gate p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.45;
+    }
+    .gate input {
+      width: 100%;
+      font-size: 28px;
+      letter-spacing: 0.35em;
+      text-align: center;
+      padding: 14px 12px;
+      border-radius: 14px;
+      border: 1px solid #343b4a;
+      background: var(--card);
+      color: var(--ink);
+      outline: none;
+    }
+    .gate input:focus { border-color: var(--accent); }
+    .gate button, .bar button {
+      appearance: none;
+      border: 0;
+      border-radius: 14px;
+      background: var(--accent);
+      color: #1a140c;
+      font-weight: 700;
+      font-size: 16px;
+      padding: 14px 16px;
+      cursor: pointer;
+    }
+    .pad {
+      flex: 1;
+      display: none;
+      flex-direction: column;
+      gap: 12px;
+      min-height: 0;
+    }
+    .pad.active { display: flex; }
+    .swipe {
+      flex: 1;
+      min-height: 180px;
+      border-radius: 22px;
+      background:
+        radial-gradient(120% 80% at 50% 0%, rgba(201, 166, 107, 0.12), transparent 55%),
+        var(--card);
+      border: 1px solid #2c3340;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      touch-action: none;
+      position: relative;
+      overflow: hidden;
+    }
+    .swipe .hint {
+      font-size: 15px;
+      color: var(--muted);
+      text-align: center;
+      padding: 0 20px;
+      line-height: 1.4;
+    }
+    .swipe .big {
+      font-size: 42px;
+      opacity: 0.35;
+      letter-spacing: 0.2em;
+    }
+    .bar {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+    .bar button {
+      background: var(--btn);
+      color: var(--ink);
+      font-size: 28px;
+      padding: 18px 12px;
+      min-height: 72px;
+    }
+    .bar button:active { filter: brightness(1.15); }
+    .foot {
+      text-align: center;
+      font-size: 11px;
+      color: var(--muted);
+    }
+    .hidden { display: none !important; }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="brand">GTR Stickies Remote</div>
+    <div class="status wait" id="status">Connecting…</div>
+  </header>
+
+  <section class="gate" id="gate">
+    <h1>Enter pair code</h1>
+    <p>On the sticky note in Presenter mode, copy the Remote link or type the code shown on the banner.</p>
+    <input id="code" inputmode="numeric" pattern="[0-9]*" maxlength="8" autocomplete="one-time-code" placeholder="••••••" />
+    <button type="button" id="connect">Connect</button>
+  </section>
+
+  <section class="pad" id="pad">
+    <div class="swipe" id="swipe" aria-label="Swipe to scroll note">
+      <div class="big">↕</div>
+      <div class="hint">Swipe up to read down<br />Swipe down to go back</div>
+    </div>
+    <div class="bar">
+      <button type="button" id="page-up" aria-label="Page up">▲</button>
+      <button type="button" id="page-down" aria-label="Page down">▼</button>
+    </div>
+    <div class="foot">Same Wi‑Fi as the PC · LAN only · no cloud</div>
+  </section>
+
+  <script>
+(function () {
+  const statusEl = document.getElementById('status');
+  const gate = document.getElementById('gate');
+  const pad = document.getElementById('pad');
+  const codeInput = document.getElementById('code');
+  const connectBtn = document.getElementById('connect');
+  const swipe = document.getElementById('swipe');
+  const pageUp = document.getElementById('page-up');
+  const pageDown = document.getElementById('page-down');
+
+  const params = new URLSearchParams(location.search);
+  let code = String(params.get('code') || params.get('c') || '').replace(/\D/g, '');
+  let ws = null;
+  let reconnectTimer = null;
+  let intentionalClose = false;
+  let lastY = null;
+  let accum = 0;
+
+  function setStatus(text, kind) {
+    statusEl.textContent = text;
+    statusEl.className = 'status ' + (kind || 'wait');
+  }
+
+  function showPad(on) {
+    if (on) {
+      gate.classList.add('hidden');
+      pad.classList.add('active');
+    } else {
+      gate.classList.remove('hidden');
+      pad.classList.remove('active');
+    }
+  }
+
+  function send(obj) {
+    if (!ws || ws.readyState !== 1) return;
+    try { ws.send(JSON.stringify(obj)); } catch (_) {}
+  }
+
+  function scheduleReconnect() {
+    if (intentionalClose) return;
+    if (reconnectTimer) clearTimeout(reconnectTimer);
+    reconnectTimer = setTimeout(connect, 1200);
+  }
+
+  function connect() {
+    if (!code) {
+      showPad(false);
+      setStatus('Code needed', 'bad');
+      return;
+    }
+    intentionalClose = false;
+    if (ws) {
+      try { ws.close(); } catch (_) {}
+      ws = null;
+    }
+    setStatus('Connecting…', 'wait');
+    const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const url = proto + '//' + location.host + '/?code=' + encodeURIComponent(code);
+    try {
+      ws = new WebSocket(url);
+    } catch (err) {
+      setStatus('Failed', 'bad');
+      scheduleReconnect();
+      return;
+    }
+    ws.onopen = function () {
+      setStatus('Connected', 'ok');
+      showPad(true);
+      send({ type: 'auth', code: code });
+    };
+    ws.onmessage = function (ev) {
+      try {
+        const msg = JSON.parse(ev.data);
+        if (msg && msg.type === 'error') {
+          setStatus('Bad code', 'bad');
+          showPad(false);
+          intentionalClose = true;
+        }
+      } catch (_) {}
+    };
+    ws.onclose = function () {
+      setStatus('Reconnecting…', 'wait');
+      scheduleReconnect();
+    };
+    ws.onerror = function () {
+      setStatus('Connection error', 'bad');
+    };
+  }
+
+  connectBtn.addEventListener('click', function () {
+    code = String(codeInput.value || '').replace(/\D/g, '');
+    if (code.length < 4) {
+      setStatus('Enter 4–6 digits', 'bad');
+      return;
+    }
+    const next = new URL(location.href);
+    next.searchParams.set('code', code);
+    history.replaceState(null, '', next.toString());
+    connect();
+  });
+
+  codeInput.addEventListener('keydown', function (e) {
+    if (e.key === 'Enter') connectBtn.click();
+  });
+
+  function onTouchStart(e) {
+    const t = e.touches && e.touches[0];
+    if (!t) return;
+    lastY = t.clientY;
+    accum = 0;
+  }
+  function onTouchMove(e) {
+    e.preventDefault();
+    const t = e.touches && e.touches[0];
+    if (!t || lastY == null) return;
+    const y = t.clientY;
+    const delta = lastY - y; // finger up → positive → scroll down
+    lastY = y;
+    accum += delta;
+    if (Math.abs(accum) >= 4) {
+      const dy = Math.round(accum);
+      accum = 0;
+      send({ type: 'scroll', dy: dy });
+    }
+  }
+  function onTouchEnd() {
+    lastY = null;
+    accum = 0;
+  }
+
+  swipe.addEventListener('touchstart', onTouchStart, { passive: true });
+  swipe.addEventListener('touchmove', onTouchMove, { passive: false });
+  swipe.addEventListener('touchend', onTouchEnd);
+  swipe.addEventListener('touchcancel', onTouchEnd);
+
+  pageUp.addEventListener('click', function () {
+    send({ type: 'page', dir: 'up' });
+  });
+  pageDown.addEventListener('click', function () {
+    send({ type: 'page', dir: 'down' });
+  });
+
+  if (code) {
+    codeInput.value = code;
+    showPad(true);
+    connect();
+  } else {
+    showPad(false);
+    setStatus('Enter code', 'wait');
+    codeInput.focus();
+  }
+})();
+  </script>
+</body>
+</html>

@@ -1,7 +1,7 @@
 {
   "name": "gtr-stickies",
   "productName": "GTR Stickies",
-  "version": "3.0.5",
+  "version": "3.0.6",
   "description": "GTR Stickies — sticky notes and a class Dashboard. Developed by Mohamed Asjau.",
   "main": "main.js",
   "author": "Mohamed Asjau <mail.asjau@gmail.com>",
@@ -13,7 +13,8 @@
   "dependencies": {
     "@koromix/koffi-win32-x64": "^3.3.1",
     "koffi": "^3.3.1",
-    "tesseract.js": "^7.0.0"
+    "tesseract.js": "^7.0.0",
+    "ws": "^8.18.3"
   },
   "build": {
     "appId": "gtr.stickies",
@@ -24,6 +25,7 @@
     },
     "files": [
       "main.js",
+      "remote-server.js",
       "preload.js",
       "package.json",
       "PRIVACY.md",
