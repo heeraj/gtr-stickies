@@ -19,6 +19,10 @@ contextBridge.exposeInMainWorld('petal', {
   onRemoteInfo: (callback) => {
     ipcRenderer.on('note:remote-info', (_event, data) => callback(data));
   },
+  pushRemoteScript: (payload) => ipcRenderer.send('note:remote-script', payload || {}),
+  onRemoteScriptRequest: (callback) => {
+    ipcRenderer.on('note:request-remote-script', () => callback());
+  },
   close: (payload) => ipcRenderer.send('note:close', payload || {}),
   minimize: () => ipcRenderer.send('note:minimize'),
   toggleFold: () => ipcRenderer.send('note:toggle-fold'),

@@ -275,6 +275,92 @@ function updateRemoteBanner(info) {
   remoteBanner.hidden = false;
 }
 
+let remoteScriptTimer = null;
+let lastPushedScript = '';
+
+function isRemoteScriptSource() {
+  if (!state.presenterMode) return false;
+  if (remoteInfo && remoteInfo.targetNoteId && state.id && remoteInfo.targetNoteId !== state.id) {
+    return false;
+  }
+  return true;
+}
+
+function blocksToText(root) {
+  const parts = [];
+  function walk(node) {
+    if (!node) return;
+    if (node.nodeType === 3) {
+      parts.push(node.nodeValue || '');
+      return;
+    }
+    if (node.nodeType !== 1) return;
+    const tag = node.tagName;
+    if (tag === 'BR') {
+      parts.push('\n');
+      return;
+    }
+    const block = tag === 'DIV' || tag === 'P' || tag === 'LI' || tag === 'UL' || tag === 'OL' || /^H[1-6]$/.test(tag) || tag === 'TR';
+    if (block && parts.length && !String(parts[parts.length - 1]).endsWith('\n')) parts.push('\n');
+    for (let i = 0; i < node.childNodes.length; i += 1) walk(node.childNodes[i]);
+    if ((tag === 'DIV' || tag === 'P' || tag === 'LI' || /^H[1-6]$/.test(tag)) && parts.length && !String(parts[parts.length - 1]).endsWith('\n')) {
+      parts.push('\n');
+    }
+  }
+  walk(root);
+  return parts.join('');
+}
+
+function currentScriptPayload() {
+  let text = '';
+  if (textEl) {
+    let laidOut = false;
+    try {
+      laidOut = !!(textEl.getClientRects && textEl.getClientRects().length);
+    } catch (_) {
+      laidOut = false;
+    }
+    if (laidOut) {
+      try {
+        text = String(textEl.innerText || '');
+      } catch (_) {
+        text = '';
+      }
+    }
+    if (!String(text).replace(/\u200b/g, '').trim()) {
+      text = blocksToText(textEl);
+    }
+  }
+  text = String(text || '').replace(/\u200b/g, '').replace(/\r\n/g, '\n');
+  if (text.length > 250000) text = text.slice(0, 250000) + '\n…';
+  const line = text.split('\n').map((part) => part.trim()).find((part) => part) || '';
+  const title = line.length > 80 ? line.slice(0, 79) + '…' : line;
+  return { text: text, title: title };
+}
+
+function pushRemoteScriptNow() {
+  if (remoteScriptTimer) {
+    clearTimeout(remoteScriptTimer);
+    remoteScriptTimer = null;
+  }
+  if (!isRemoteScriptSource()) return;
+  if (!window.petal.pushRemoteScript) return;
+  const payload = currentScriptPayload();
+  const key = payload.title + '\n' + payload.text;
+  if (key === lastPushedScript) return;
+  lastPushedScript = key;
+  window.petal.pushRemoteScript(payload);
+}
+
+function scheduleRemoteScript() {
+  if (!state.presenterMode) return;
+  if (remoteScriptTimer) clearTimeout(remoteScriptTimer);
+  remoteScriptTimer = setTimeout(() => {
+    remoteScriptTimer = null;
+    pushRemoteScriptNow();
+  }, 300);
+}
+
 function applyRemoteScroll(payload) {
   if (!payload) return;
   const el = textEl;
@@ -314,6 +400,11 @@ function applyPresenter(on) {
   }
   noteEl.classList.toggle('is-presenter', state.presenterMode);
   if (!state.presenterMode) {
+    lastPushedScript = '';
+    if (remoteScriptTimer) {
+      clearTimeout(remoteScriptTimer);
+      remoteScriptTimer = null;
+    }
     if (window.petal.setPresenterPointer) window.petal.setPresenterPointer(false);
     updateRemoteBanner(null);
   } else {
@@ -665,11 +756,13 @@ function scheduleSave() {
   saveTimer = setTimeout(() => {
     window.petal.updateText(editorHtml());
   }, 140);
+  scheduleRemoteScript();
 }
 
 function flushSave() {
   clearTimeout(saveTimer);
   window.petal.updateText(editorHtml());
+  if (state.presenterMode) pushRemoteScriptNow();
 }
 
 function persistFormat() {
@@ -1153,6 +1246,13 @@ if (window.petal.onRemoteScroll) {
 if (window.petal.onRemoteInfo) {
   window.petal.onRemoteInfo((info) => {
     updateRemoteBanner(info);
+    if (info && info.running) pushRemoteScriptNow();
+  });
+}
+
+if (window.petal.onRemoteScriptRequest) {
+  window.petal.onRemoteScriptRequest(() => {
+    pushRemoteScriptNow();
   });
 }
 

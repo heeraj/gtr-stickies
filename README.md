@@ -1,12 +1,12 @@
 # GTR Stickies
 
-Little thoughts, always on top. Version 3.0.6.
+Little thoughts, always on top. Version 3.0.7.
 
 GTR Stickies is a warm, frameless desktop sticky-notes app with a class Dashboard. Developed by Mohamed Asjau. Contact: mail.asjau@gmail.com. Notes sit on your screen like scraps of paper -- cream, blush, sage, sky, and lavender -- with a quiet top bar, a tray for new notes, and local persistence. The All notes window is the home of the app.
 
 Privacy: see [PRIVACY.md](PRIVACY.md).
 
-GTR Stickies 3.0.6 is an early build and may contain bugs. Developed by Mohamed Asjau. Contact: mail.asjau@gmail.com.
+GTR Stickies 3.0.7 is an early build and may contain bugs. Developed by Mohamed Asjau. Contact: mail.asjau@gmail.com.
 
 ## How to run
 
@@ -47,13 +47,13 @@ First launch seeds two sample notes in All notes (one cream welcome, one sage bl
 
 ## Phone remote (Presenter)
 
-When Presenter mode is on for any note, Stickies starts a tiny local HTTP + WebSocket server on your LAN (port **17832**, or the next free port nearby). A phone on the same Wi‑Fi can open the page and swipe to scroll the note paper **without focusing** the Stickies window — so the mouse/keyboard stay on PowerPoint or Meet.
+When Presenter mode is on for any note, Stickies starts a tiny local HTTP + WebSocket server on your LAN (port **17832**, or the next free port nearby). A phone on the same Wi‑Fi can open the page, read the live script, and scroll the note paper **without focusing** the Stickies window — so the mouse/keyboard stay on PowerPoint or Meet.
 
 1. Pin the cue note and turn on Presenter (eye-off).
 2. A compact **Remote** banner appears with `http://<lan-ip>:17832` and a 6-digit code (and **Copy link**).
 3. On your phone (same Wi‑Fi), open the link or visit the URL and enter the code.
-4. Swipe up to scroll the script down; swipe down to go back. Large ▲ / ▼ buttons page the note.
-5. Turn Presenter off on every note to stop the server (code is regenerated next time).
+4. The phone shows the note's script (plain text, line breaks kept). Scroll that text — the PC sticky scrolls with it, without taking focus from PowerPoint or Meet. Large ▲ / ▼ buttons page both.
+5. Edits on the PC reach the phone after a short pause (about 300ms). Turn Presenter off on every note to stop the server (code is regenerated next time).
 
 Security (v0): LAN only, code gate, no cloud accounts. Windows Firewall may prompt the first time — allow **private** networks so phones on your Wi‑Fi can connect.
 

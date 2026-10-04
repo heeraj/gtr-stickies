@@ -1,7 +1,7 @@
 {
   "name": "gtr-stickies",
   "productName": "GTR Stickies",
-  "version": "3.0.6",
+  "version": "3.0.7",
   "description": "GTR Stickies — sticky notes and a class Dashboard. Developed by Mohamed Asjau.",
   "main": "main.js",
   "author": "Mohamed Asjau <mail.asjau@gmail.com>",

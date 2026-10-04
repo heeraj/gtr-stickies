@@ -26,8 +26,9 @@
       color: var(--ink);
       font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
       overflow: hidden;
-      touch-action: none;
+      touch-action: manipulation;
       user-select: none;
+      -webkit-user-select: none;
     }
     body {
       display: flex;
@@ -40,6 +41,7 @@
       align-items: center;
       justify-content: space-between;
       gap: 10px;
+      flex-shrink: 0;
     }
     .brand {
       font-size: 13px;
@@ -108,56 +110,85 @@
       flex: 1;
       display: none;
       flex-direction: column;
-      gap: 12px;
+      gap: 10px;
       min-height: 0;
     }
     .pad.active { display: flex; }
-    .swipe {
+    .note-title {
+      flex-shrink: 0;
+      font-size: 13px;
+      font-weight: 650;
+      color: var(--accent);
+      letter-spacing: 0.01em;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .reader {
       flex: 1;
-      min-height: 180px;
+      min-height: 0;
+      position: relative;
       border-radius: 22px;
       background:
         radial-gradient(120% 80% at 50% 0%, rgba(201, 166, 107, 0.12), transparent 55%),
         var(--card);
       border: 1px solid #2c3340;
+      overflow: hidden;
       display: flex;
       flex-direction: column;
+    }
+    .script {
+      flex: 1;
+      min-height: 0;
+      margin: 0;
+      overflow-x: hidden;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+      overscroll-behavior: contain;
+      touch-action: pan-y;
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+      word-break: break-word;
+      user-select: text;
+      -webkit-user-select: text;
+      padding: 18px 16px 28px;
+      font-size: 17px;
+      line-height: 1.5;
+      color: var(--ink);
+    }
+    .script-empty {
+      position: absolute;
+      inset: 0;
+      display: flex;
       align-items: center;
       justify-content: center;
-      gap: 8px;
-      touch-action: none;
-      position: relative;
-      overflow: hidden;
-    }
-    .swipe .hint {
-      font-size: 15px;
-      color: var(--muted);
       text-align: center;
-      padding: 0 20px;
-      line-height: 1.4;
+      padding: 24px;
+      color: var(--muted);
+      font-size: 15px;
+      line-height: 1.45;
+      pointer-events: none;
     }
-    .swipe .big {
-      font-size: 42px;
-      opacity: 0.35;
-      letter-spacing: 0.2em;
-    }
+    .reader.has-text .script-empty { display: none; }
     .bar {
       display: grid;
       grid-template-columns: 1fr 1fr;
       gap: 10px;
+      flex-shrink: 0;
     }
     .bar button {
       background: var(--btn);
       color: var(--ink);
       font-size: 28px;
-      padding: 18px 12px;
-      min-height: 72px;
+      padding: 14px 12px;
+      min-height: 64px;
     }
     .bar button:active { filter: brightness(1.15); }
     .foot {
       text-align: center;
       font-size: 11px;
       color: var(--muted);
+      flex-shrink: 0;
     }
     .hidden { display: none !important; }
   </style>
@@ -176,15 +207,16 @@
   </section>
 
   <section class="pad" id="pad">
-    <div class="swipe" id="swipe" aria-label="Swipe to scroll note">
-      <div class="big">↕</div>
-      <div class="hint">Swipe up to read down<br />Swipe down to go back</div>
+    <div class="note-title" id="note-title" hidden></div>
+    <div class="reader" id="reader">
+      <article class="script" id="script" aria-label="Note script"></article>
+      <div class="script-empty" id="script-empty">Waiting for the script…</div>
     </div>
     <div class="bar">
       <button type="button" id="page-up" aria-label="Page up">▲</button>
       <button type="button" id="page-down" aria-label="Page down">▼</button>
     </div>
-    <div class="foot">Same Wi‑Fi as the PC · LAN only · no cloud</div>
+    <div class="foot">Scroll the script — the PC note follows · LAN only</div>
   </section>
 
   <script>
@@ -194,7 +226,9 @@
   const pad = document.getElementById('pad');
   const codeInput = document.getElementById('code');
   const connectBtn = document.getElementById('connect');
-  const swipe = document.getElementById('swipe');
+  const reader = document.getElementById('reader');
+  const scriptEl = document.getElementById('script');
+  const titleEl = document.getElementById('note-title');
   const pageUp = document.getElementById('page-up');
   const pageDown = document.getElementById('page-down');
 
@@ -203,8 +237,9 @@
   let ws = null;
   let reconnectTimer = null;
   let intentionalClose = false;
-  let lastY = null;
-  let accum = 0;
+  let currentText = null;
+  let echoUntil = 0;
+  let ratioQueued = false;
 
   function setStatus(text, kind) {
     statusEl.textContent = text;
@@ -224,6 +259,33 @@
   function send(obj) {
     if (!ws || ws.readyState !== 1) return;
     try { ws.send(JSON.stringify(obj)); } catch (_) {}
+  }
+
+  function applyNote(msg) {
+    const text = String((msg && msg.text) || '');
+    const title = String((msg && msg.title) || '').replace(/\s+/g, ' ').trim();
+    if (titleEl) {
+      titleEl.textContent = title;
+      titleEl.hidden = !title;
+    }
+    if (text === currentText) return;
+    const max = Math.max(0, scriptEl.scrollHeight - scriptEl.clientHeight);
+    const ratio = max <= 0 ? 0 : scriptEl.scrollTop / max;
+    currentText = text;
+    scriptEl.textContent = text;
+    reader.classList.toggle('has-text', text.replace(/\s/g, '').length > 0);
+    echoUntil = Date.now() + 180;
+    requestAnimationFrame(function () {
+      const max2 = Math.max(0, scriptEl.scrollHeight - scriptEl.clientHeight);
+      echoUntil = Date.now() + 180;
+      scriptEl.scrollTop = max2 * ratio;
+    });
+  }
+
+  function sendRatio() {
+    const max = Math.max(0, scriptEl.scrollHeight - scriptEl.clientHeight);
+    const ratio = max <= 0 ? 0 : scriptEl.scrollTop / max;
+    send({ type: 'scrollTo', ratio: Math.max(0, Math.min(1, ratio)) });
   }
 
   function scheduleReconnect() {
@@ -259,16 +321,28 @@
       send({ type: 'auth', code: code });
     };
     ws.onmessage = function (ev) {
+      let msg = null;
       try {
-        const msg = JSON.parse(ev.data);
-        if (msg && msg.type === 'error') {
-          setStatus('Bad code', 'bad');
-          showPad(false);
-          intentionalClose = true;
-        }
-      } catch (_) {}
+        msg = JSON.parse(ev.data);
+      } catch (_) {
+        return;
+      }
+      if (!msg || typeof msg !== 'object') return;
+      if (msg.type === 'error') {
+        setStatus('Bad code', 'bad');
+        showPad(false);
+        intentionalClose = true;
+        return;
+      }
+      if (msg.type === 'hello' && msg.ok) {
+        setStatus('Connected', 'ok');
+        showPad(true);
+        return;
+      }
+      if (msg.type === 'note') applyNote(msg);
     };
     ws.onclose = function () {
+      if (intentionalClose) return;
       setStatus('Reconnecting…', 'wait');
       scheduleReconnect();
     };
@@ -293,42 +367,33 @@
     if (e.key === 'Enter') connectBtn.click();
   });
 
-  function onTouchStart(e) {
-    const t = e.touches && e.touches[0];
-    if (!t) return;
-    lastY = t.clientY;
-    accum = 0;
-  }
-  function onTouchMove(e) {
-    e.preventDefault();
-    const t = e.touches && e.touches[0];
-    if (!t || lastY == null) return;
-    const y = t.clientY;
-    const delta = lastY - y; // finger up → positive → scroll down
-    lastY = y;
-    accum += delta;
-    if (Math.abs(accum) >= 4) {
-      const dy = Math.round(accum);
-      accum = 0;
-      send({ type: 'scroll', dy: dy });
+  scriptEl.addEventListener('scroll', function () {
+    if (Date.now() < echoUntil) return;
+    if (ratioQueued) return;
+    ratioQueued = true;
+    requestAnimationFrame(function () {
+      ratioQueued = false;
+      if (Date.now() < echoUntil) return;
+      sendRatio();
+    });
+  }, { passive: true });
+
+  function pageBy(dir) {
+    const page = Math.max(48, Math.floor(scriptEl.clientHeight * 0.85));
+    const before = scriptEl.scrollTop;
+    const max = Math.max(0, scriptEl.scrollHeight - scriptEl.clientHeight);
+    const next = Math.max(0, Math.min(max, before + (dir === 'up' ? -page : page)));
+    echoUntil = Date.now() + 140;
+    scriptEl.scrollTop = next;
+    if (Math.abs(next - before) > 0.5 && max > 0) {
+      send({ type: 'scrollTo', ratio: next / max });
+    } else {
+      send({ type: 'page', dir: dir });
     }
   }
-  function onTouchEnd() {
-    lastY = null;
-    accum = 0;
-  }
 
-  swipe.addEventListener('touchstart', onTouchStart, { passive: true });
-  swipe.addEventListener('touchmove', onTouchMove, { passive: false });
-  swipe.addEventListener('touchend', onTouchEnd);
-  swipe.addEventListener('touchcancel', onTouchEnd);
-
-  pageUp.addEventListener('click', function () {
-    send({ type: 'page', dir: 'up' });
-  });
-  pageDown.addEventListener('click', function () {
-    send({ type: 'page', dir: 'down' });
-  });
+  pageUp.addEventListener('click', function () { pageBy('up'); });
+  pageDown.addEventListener('click', function () { pageBy('down'); });
 
   if (code) {
     codeInput.value = code;

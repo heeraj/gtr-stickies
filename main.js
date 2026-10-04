@@ -1010,10 +1010,98 @@ function broadcastRemoteInfo(info) {
   }
 }
 
+const REMOTE_SCRIPT_MAX = 250000;
+let latestRemoteScript = null;
+let lastBroadcastKey = null;
+
+function clipRemoteText(text) {
+  const raw = String(text || '').replace(/\u200b/g, '').replace(/\r\n/g, '\n');
+  if (raw.length > REMOTE_SCRIPT_MAX) return raw.slice(0, REMOTE_SCRIPT_MAX) + '\n…';
+  return raw;
+}
+
+function titleFromScript(text) {
+  const line = String(text || '')
+    .split('\n')
+    .map((part) => part.trim())
+    .find((part) => part.length > 0) || '';
+  if (!line) return '';
+  return line.length > 80 ? line.slice(0, 79) + '…' : line;
+}
+
+function scriptFromEntry(entry) {
+  const text = clipRemoteText(plainText(entry && entry.data ? entry.data.text : ''));
+  return {
+    text,
+    title: titleFromScript(text),
+    noteId: entry && entry.data ? entry.data.id : null,
+  };
+}
+
+function publishRemoteNote(payload) {
+  if (!payload) return;
+  latestRemoteScript = {
+    text: typeof payload.text === 'string' ? payload.text : '',
+    title: typeof payload.title === 'string' ? payload.title : '',
+    noteId: payload.noteId || null,
+  };
+  if (!presenterRemote || !presenterRemote.isRunning() || typeof presenterRemote.broadcast !== 'function') {
+    lastBroadcastKey = null;
+    return;
+  }
+  const key = (latestRemoteScript.noteId || '') + '\n' + latestRemoteScript.title + '\n' + latestRemoteScript.text;
+  if (key === lastBroadcastKey) return;
+  lastBroadcastKey = key;
+  try {
+    presenterRemote.broadcast({
+      type: 'note',
+      text: latestRemoteScript.text,
+      title: latestRemoteScript.title,
+    });
+  } catch (_) {
+    /* ignore */
+  }
+}
+
+function requestLiveScript() {
+  const entry = resolveRemoteTargetEntry();
+  if (!entry || !entry.win || entry.win.isDestroyed()) return;
+  const wc = entry.win.webContents;
+  if (!wc || wc.isDestroyed()) return;
+  try {
+    wc.send('note:request-remote-script');
+  } catch (_) {
+    /* ignore */
+  }
+}
+
+function publishTargetScript() {
+  const entry = resolveRemoteTargetEntry();
+  if (!entry) {
+    latestRemoteScript = null;
+    lastBroadcastKey = null;
+    if (presenterRemote && presenterRemote.isRunning() && typeof presenterRemote.broadcast === 'function') {
+      try {
+        presenterRemote.broadcast({ type: 'note', text: '', title: '' });
+      } catch (_) {
+        /* ignore */
+      }
+    }
+    return;
+  }
+  const cached = latestRemoteScript && latestRemoteScript.noteId === entry.data.id
+    ? latestRemoteScript
+    : null;
+  publishRemoteNote(cached || scriptFromEntry(entry));
+  requestLiveScript();
+}
+
 async function syncPresenterRemote() {
   const active = presenterEntries();
   if (!active.length) {
     remoteTargetNoteId = null;
+    latestRemoteScript = null;
+    lastBroadcastKey = null;
     if (presenterRemote && presenterRemote.isRunning()) {
       presenterRemote.stop();
     } else {
@@ -1031,6 +1119,7 @@ async function syncPresenterRemote() {
     const remote = getPresenterRemote();
     const info = await remote.start();
     broadcastRemoteInfo(info);
+    publishTargetScript();
   } catch (err) {
     console.warn('Presenter remote failed to start:', err && err.message ? err.message : err);
     broadcastRemoteInfo({ running: false, error: String(err && err.message ? err.message : err) });
@@ -1149,6 +1238,13 @@ function attachWindow(entry, { focus } = { focus: true }) {
         });
       } catch (_) {
         /* ignore */
+      }
+      if (!remoteTargetNoteId || remoteTargetNoteId === noteData.id) {
+        try {
+          win.webContents.send('note:request-remote-script');
+        } catch (_) {
+          /* ignore */
+        }
       }
     } else if (noteData.presenterMode) {
       setTimeout(() => { try { syncPresenterRemote(); } catch (_) {} }, 0);
@@ -2565,6 +2661,18 @@ function wireIpc() {
     entry.data.updatedAt = Date.now();
     applyWindowTitle(entry);
     persist();
+  });
+
+  ipcMain.on('note:remote-script', (event, payload) => {
+    const entry = findEntry(event.sender);
+    if (!entry || !entry.data || !entry.data.presenterMode) return;
+    if (remoteTargetNoteId && entry.data.id !== remoteTargetNoteId) return;
+    const body = payload && typeof payload === 'object' ? payload : {};
+    const text = clipRemoteText(body.text);
+    let title = typeof body.title === 'string' ? body.title.replace(/\s+/g, ' ').trim() : '';
+    if (title.length > 80) title = title.slice(0, 79) + '…';
+    if (!title) title = titleFromScript(text);
+    publishRemoteNote({ text, title, noteId: entry.data.id });
   });
 
   ipcMain.on('note:format', (event, format) => {

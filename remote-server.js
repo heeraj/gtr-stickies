@@ -56,6 +56,7 @@ function createPresenterRemote({ htmlPath, onScroll, onStatus } = {}) {
   let port = null;
   let code = null;
   let starting = null;
+  let lastNote = null;
   const clients = new Set();
 
   function info() {
@@ -128,6 +129,7 @@ function createPresenterRemote({ htmlPath, onScroll, onStatus } = {}) {
 
   function attachClient(ws, alreadyAuthed) {
     let authed = !!alreadyAuthed;
+    ws._gtrAuthed = !!alreadyAuthed;
     clients.add(ws);
     emitStatus();
 
@@ -138,10 +140,18 @@ function createPresenterRemote({ htmlPath, onScroll, onStatus } = {}) {
           const msg = JSON.parse(text);
           if (msg && (msg.type === 'auth' || msg.code) && authorized(msg.code)) {
             authed = true;
+            ws._gtrAuthed = true;
             try {
               ws.send(JSON.stringify({ type: 'hello', ok: true }));
             } catch (_) {
               /* ignore */
+            }
+            if (lastNote) {
+              try {
+                ws.send(JSON.stringify(lastNote));
+              } catch (_) {
+                /* ignore */
+              }
             }
             return;
           }
@@ -173,12 +183,49 @@ function createPresenterRemote({ htmlPath, onScroll, onStatus } = {}) {
     });
 
     if (authed) {
+      ws._gtrAuthed = true;
       try {
         ws.send(JSON.stringify({ type: 'hello', ok: true }));
       } catch (_) {
         /* ignore */
       }
+      if (lastNote) {
+        try {
+          ws.send(JSON.stringify(lastNote));
+        } catch (_) {
+          /* ignore */
+        }
+      }
     }
+  }
+
+  function broadcast(message) {
+    if (!message || typeof message !== 'object') return 0;
+    let payload = message;
+    if (message.type === 'note') {
+      const text = typeof message.text === 'string' ? message.text : '';
+      const title = typeof message.title === 'string' ? message.title : '';
+      lastNote = { type: 'note', text, title };
+      payload = lastNote;
+    }
+    let raw;
+    try {
+      raw = JSON.stringify(payload);
+    } catch (_) {
+      return 0;
+    }
+    let sent = 0;
+    for (const ws of clients) {
+      if (!ws._gtrAuthed) continue;
+      if (ws.readyState !== 1) continue;
+      try {
+        ws.send(raw);
+        sent += 1;
+      } catch (_) {
+        /* ignore */
+      }
+    }
+    return sent;
   }
 
   function tryListen(srv, tryPort) {
@@ -329,6 +376,7 @@ function createPresenterRemote({ htmlPath, onScroll, onStatus } = {}) {
     }
     port = null;
     code = null;
+    lastNote = null;
     emitStatus();
     return info();
   }
@@ -337,7 +385,7 @@ function createPresenterRemote({ htmlPath, onScroll, onStatus } = {}) {
     return !!(server && port && code);
   }
 
-  return { start, stop, info, isRunning, lanIPv4 };
+  return { start, stop, info, isRunning, broadcast, lanIPv4 };
 }
 
 module.exports = {
