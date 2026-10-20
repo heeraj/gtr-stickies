@@ -2,11 +2,11 @@
 
 Little thoughts, always on top. Version 3.0.7.
 
-GTR Stickies is a warm, frameless desktop sticky-notes app with a class Dashboard. Developed by Mohamed Asjau. Contact: mail.asjau@gmail.com. Notes sit on your screen like scraps of paper -- cream, blush, sage, sky, and lavender -- with a quiet top bar, a tray for new notes, and local persistence. The All notes window is the home of the app.
+GTR Stickies is a warm, frameless desktop sticky-notes app with a class Dashboard. Developed by Mohamed Asjau. Contact: heeraj.apex@gmail.com. Notes sit on your screen like scraps of paper -- cream, blush, sage, sky, and lavender -- with a quiet top bar, a tray for new notes, and local persistence. The All notes window is the home of the app.
 
 Privacy: see [PRIVACY.md](PRIVACY.md).
 
-GTR Stickies 3.0.7 is an early build and may contain bugs. Developed by Mohamed Asjau. Contact: mail.asjau@gmail.com.
+GTR Stickies 3.0.7 is an early build and may contain bugs. Developed by Mohamed Asjau. Contact: heeraj.apex@gmail.com.
 
 ## How to run
 
@@ -59,7 +59,7 @@ Security (v0): LAN only, code gate, no cloud accounts. Windows Firewall may prom
 
 ## Dashboard
 
-A widget-style paper window for course deadlines (Asjau / MI College / Business Law). The product is still GTR Stickies; Dashboard is a window inside it (internal IPC stays `board:*`). The app still starts at All notes -- Dashboard opens only from the All notes button, a note's optional Dashboard icon, or the tray. Settings has an off-by-default "Open dashboard on launch".
+A widget-style paper window for course deadlines (Name / College / Business module). The product is still GTR Stickies; Dashboard is a window inside it (internal IPC stays `board:*`). The app still starts at All notes -- Dashboard opens only from the All notes button, a note's optional Dashboard icon, or the tray. Settings has an off-by-default "Open dashboard on launch".
 
 Dashboard is a desktop gadget (not always-on-top, no taskbar button — reopen from All notes or the tray). Themes: Paper, Aero, Glow, Midnight, Campus (dots in the header). Status lights go green → yellow → red as a due date gets close; overdue pulses. Click a row for Mark done / Restore; completed items move to Done. Drag the header to move the gadget.
 
